@@ -38,6 +38,12 @@ class TelegramMessenger:
             json={"chat_id": chat_id, "message_id": message_id},
         )
 
+    async def edit_message(self, *, chat_id: int, message_id: int, text: str) -> None:
+        await self._client.request(
+            "editMessageText",
+            json={"chat_id": chat_id, "message_id": message_id, "text": text},
+        )
+
     async def send_chat_action(self, *, chat_id: int, action: str = "typing") -> None:
         await self._client.request(
             "sendChatAction",
@@ -48,9 +54,7 @@ class TelegramMessenger:
         self, *, chat_id: int, text: str, parse_mode: str | None = None
     ) -> None:
         for chunk in split_messages(text):
-            await self.send_message(
-                chat_id=chat_id, text=chunk, parse_mode=parse_mode
-            )
+            await self.send_message(chat_id=chat_id, text=chunk, parse_mode=parse_mode)
 
     async def send_photo(
         self, *, chat_id: int, photo_path: str, caption: str | None = None

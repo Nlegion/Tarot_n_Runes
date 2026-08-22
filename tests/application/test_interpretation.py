@@ -54,4 +54,4 @@ def test_finalize_dedupes() -> None:
 def test_finalize_clamps_length() -> None:
     text = "Абзац.\n\n" + ("Слово " * 400)
     cleaned = finalize_interpretation(text, spread_code=SPREAD_THREE)
-    assert len(cleaned) <= 950
+    assert len(cleaned) <= 1600

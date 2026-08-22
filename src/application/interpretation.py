@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import re
 
+from src.application.interpretation_sections import (
+    clamp_with_sections,
+    merge_orphan_labels,
+    missing_sections,
+    thin_sections,
+)
 from src.core.settings.constants import (
     MAX_INTERPRETATION_CHARS,
     MAX_TELEGRAM_MESSAGE,
     MIN_INTERPRETATION_CHARS,
     SPREAD_SINGLE,
+    SPREAD_THREE,
 )
 
 _TRUNCATION = re.compile(r"\n?\.\.\.\[truncated\]", re.IGNORECASE)
@@ -18,6 +25,7 @@ _PARAGRAPH_BREAK = re.compile(r"\n\s*\n+")
 _MULTI_SPACE = re.compile(r"[^\S\n]+")
 _MARKDOWN_HEADER = re.compile(r"^#+\s*", re.MULTILINE)
 _BULLET = re.compile(r"^[\-*•]\s+", re.MULTILINE)
+_EMPHASIS = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
 
 
 _THINKING = re.compile(
@@ -43,6 +51,10 @@ def normalize_paragraphs(text: str) -> str:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     normalized = _MARKDOWN_HEADER.sub("", normalized)
     normalized = _BULLET.sub("", normalized)
+    normalized = _EMPHASIS.sub(
+        lambda match: match.group(1) or match.group(2) or "",
+        normalized,
+    )
     blocks = _PARAGRAPH_BREAK.split(normalized.strip())
     paragraphs: list[str] = []
     for block in blocks:
@@ -86,7 +98,11 @@ def clamp_to_sentence(text: str, *, max_chars: int = MAX_TELEGRAM_MESSAGE) -> st
     return candidate
 
 
-def clamp_interpretation(text: str, *, max_chars: int) -> str:
+def clamp_interpretation(
+    text: str, *, max_chars: int, spread_code: str = SPREAD_SINGLE
+) -> str:
+    if spread_code in (SPREAD_THREE,):
+        return clamp_with_sections(text, max_chars=max_chars, spread_code=spread_code)
     if len(text) <= max_chars:
         return text
     paragraphs = text.split("\n\n")
@@ -134,8 +150,19 @@ def split_messages(text: str, *, max_chars: int = MAX_TELEGRAM_MESSAGE) -> list[
     return chunks
 
 
+def prepare_interpretation_text(text: str) -> str:
+    cleaned = strip_markers(text)
+    cleaned = normalize_paragraphs(cleaned)
+    cleaned = merge_orphan_labels(cleaned)
+    return dedupe_sentences(cleaned)
+
+
 def validate_interpretation(
-    text: str, *, finish_reason: str | None = None
+    text: str,
+    *,
+    spread_code: str = SPREAD_SINGLE,
+    pre_clamp_text: str | None = None,
+    finish_reason: str | None = None,
 ) -> list[str]:
     issues: list[str] = []
     if not text.strip():
@@ -146,12 +173,15 @@ def validate_interpretation(
         issues.append("finish_reason_length")
     if "redacted_thinking" in text.lower():
         issues.append("thinking_marker")
+    source = pre_clamp_text if pre_clamp_text is not None else text
+    for section in missing_sections(source, spread_code=spread_code):
+        issues.append(f"missing_section:{section}")
+    for section in thin_sections(source, spread_code=spread_code):
+        issues.append(f"thin_section:{section}")
     return issues
 
 
 def finalize_interpretation(text: str, *, spread_code: str = SPREAD_SINGLE) -> str:
-    cleaned = strip_markers(text)
-    cleaned = normalize_paragraphs(cleaned)
-    cleaned = dedupe_sentences(cleaned)
+    cleaned = prepare_interpretation_text(text)
     max_chars = MAX_INTERPRETATION_CHARS.get(spread_code, 650)
-    return clamp_interpretation(cleaned, max_chars=max_chars)
+    return clamp_interpretation(cleaned, max_chars=max_chars, spread_code=spread_code)

@@ -46,9 +46,7 @@ def test_three_header_includes_labels() -> None:
         2: _card(2, "Императрица"),
         3: _card(3, "Звезда"),
     }
-    header = format_reading_header(
-        slots=slots, cards=cards, spread_code=SPREAD_THREE
-    )
+    header = format_reading_header(slots=slots, cards=cards, spread_code=SPREAD_THREE)
     assert "Прошлое:" in header
     assert "Настоящее:" in header
     assert "Будущее:" in header

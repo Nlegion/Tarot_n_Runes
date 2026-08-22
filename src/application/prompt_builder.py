@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from src.application.dto import GenerationRequest
-from src.core.settings.constants import MAX_SLOT_TEXT_CHARS
+from src.core.settings.constants import (
+    MAX_INTERPRETATION_CHARS,
+    MAX_SLOT_TEXT_CHARS,
+    MIN_SECTION_BODY_CHARS,
+)
 from src.domain.entities import Card, SlotDraw
 
 _SLOT_LABELS = {
@@ -65,13 +69,26 @@ def build_prompt(
 
 
 def build_repair_prompt(
-    *, base: GenerationRequest, issues: list[str]
+    *,
+    base: GenerationRequest,
+    issues: list[str],
+    spread_code: str,
 ) -> GenerationRequest:
+    max_chars = MAX_INTERPRETATION_CHARS.get(spread_code, 650)
+    if spread_code == "three":
+        format_hint = (
+            f"Верни толкование с обязательными абзацами «Прошлое:», «Настоящее:», "
+            f"«Будущее:» и кратким «Вывод:». Метка и текст каждой секции — "
+            f"в одном абзаце, не менее {MIN_SECTION_BODY_CHARS} символов на секцию. "
+            f"Не более {max_chars} символов. Без markdown и списков."
+        )
+    else:
+        format_hint = (
+            f"Дай связное толкование: 3–5 коротких абзацев через пустую строку, "
+            f"не более {max_chars} символов. Без markdown и списков."
+        )
     feedback = (
-        "Предыдущий ответ был неприемлем: "
-        + ", ".join(issues)
-        + ". Дай связное толкование: 3–5 коротких абзацев через пустую строку, "
-        "без markdown и служебных меток."
+        "Предыдущий ответ был неприемлем: " + ", ".join(issues) + ". " + format_hint
     )
     system_prompt = base.system_prompt + "\n\n" + feedback
     messages = [

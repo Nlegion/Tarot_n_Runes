@@ -26,7 +26,7 @@ class BackendConfig:
     model_name: str
     temperature: float = 0.7
     top_p: float = 0.9
-    max_tokens: int = 900
+    max_tokens: int = 1500
     thinking_mode: str = "disabled"
 
 

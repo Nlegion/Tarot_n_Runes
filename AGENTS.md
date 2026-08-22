@@ -1,6 +1,6 @@
 # Tarot Bot — Agent Guide
 
-Telegram bot for tarot readings with DeepSeek interpretation.
+Telegram bot for tarot readings with DeepSeek interpretation. Live bot: [@NordTarotBot](https://t.me/NordTarotBot).
 
 ## Tech Stack
 

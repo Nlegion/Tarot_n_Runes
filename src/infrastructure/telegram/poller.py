@@ -7,6 +7,7 @@ import asyncio
 import httpx
 import structlog
 
+from src.core.settings.constants import TELEGRAM_POLL_TIMEOUT
 from src.infrastructure.telegram.client import TelegramClient
 
 logger = structlog.get_logger()
@@ -18,7 +19,7 @@ class TelegramPoller:
         *,
         client: TelegramClient,
         handler,
-        poll_timeout: int = 30,
+        poll_timeout: int = TELEGRAM_POLL_TIMEOUT,
     ) -> None:
         self._client = client
         self._handler = handler
@@ -28,9 +29,13 @@ class TelegramPoller:
 
     async def run(self) -> None:
         self._running = True
-        await self._client.request(
-            "deleteWebhook", json={"drop_pending_updates": False}
-        )
+        try:
+            await self._client.request(
+                "deleteWebhook",
+                json={"drop_pending_updates": False},
+            )
+        except httpx.RequestError as exc:
+            logger.warning("telegram_delete_webhook_error", error=str(exc))
         while self._running:
             params: dict = {
                 "timeout": self._poll_timeout,
@@ -39,9 +44,13 @@ class TelegramPoller:
             if self._offset is not None:
                 params["offset"] = self._offset
             try:
-                payload = await self._client.request("getUpdates", json=params)
-            except httpx.ConnectError as exc:
-                logger.warning("telegram_poll_connect_error", error=str(exc))
+                payload = await self._client.request(
+                    "getUpdates",
+                    json=params,
+                    retry=False,
+                )
+            except httpx.RequestError as exc:
+                logger.warning("telegram_poll_request_error", error=str(exc))
                 await asyncio.sleep(5)
                 continue
             for update in payload.get("result", []):

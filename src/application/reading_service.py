@@ -8,6 +8,7 @@ import structlog
 
 from src.application.interpretation import (
     finalize_interpretation,
+    prepare_interpretation_text,
     validate_interpretation,
 )
 from src.application.ports import (
@@ -85,6 +86,7 @@ class ReadingService:
             spread_code=spread_code,
             slots=draw.slots,
             prompt=prompt,
+            with_focus_pause=True,
         )
 
     async def perform_daily(
@@ -128,6 +130,7 @@ class ReadingService:
             spread_code=SPREAD_DAILY,
             slots=draw.slots,
             prompt=prompt,
+            with_focus_pause=not for_broadcast,
         )
 
     async def _load_slots(self, reading_id: int) -> tuple[SlotDraw, ...]:
@@ -158,6 +161,7 @@ class ReadingService:
         spread_code: str,
         slots: tuple[SlotDraw, ...],
         prompt: dict,
+        with_focus_pause: bool = False,
     ) -> None:
         cards = {
             slot.card_id: await self._cards.get_by_id(slot.card_id) for slot in slots
@@ -174,29 +178,66 @@ class ReadingService:
             messenger=self._messenger,
             chat_id=telegram_chat_id,
             spread_code=spread_code,
-        ):
-            response = await self._llm.generate(request=request)
+            with_focus_pause=with_focus_pause,
+        ) as run_generation:
+            response = await run_generation(lambda: self._llm.generate(request=request))
         raw_text = response.text
+        if not raw_text.strip():
+            logger.warning(
+                "llm_empty_content",
+                reading_id=reading_id,
+                spread_code=spread_code,
+            )
+        pre_clamp = prepare_interpretation_text(raw_text)
         interpretation = finalize_interpretation(raw_text, spread_code=spread_code)
         issues = validate_interpretation(
-            interpretation, finish_reason=response.finish_reason
+            interpretation,
+            spread_code=spread_code,
+            pre_clamp_text=pre_clamp,
+            finish_reason=response.finish_reason,
         )
         repair_raw: str | None = None
         if issues:
-            repair_request = build_repair_prompt(base=request, issues=issues)
+            repair_request = build_repair_prompt(
+                base=request,
+                issues=issues,
+                spread_code=spread_code,
+            )
             async with processing_notice(
                 messenger=self._messenger,
                 chat_id=telegram_chat_id,
                 spread_code=spread_code,
-            ):
-                repair_response = await self._llm.generate(request=repair_request)
+                with_focus_pause=False,
+            ) as run_repair:
+                repair_response = await run_repair(
+                    lambda: self._llm.generate(request=repair_request)
+                )
             repair_raw = repair_response.text
+            if not repair_raw.strip():
+                logger.warning(
+                    "llm_empty_content_repair",
+                    reading_id=reading_id,
+                    spread_code=spread_code,
+                )
+            repair_pre_clamp = prepare_interpretation_text(repair_raw)
             interpretation = finalize_interpretation(
                 repair_raw, spread_code=spread_code
             )
             issues = validate_interpretation(
-                interpretation, finish_reason=repair_response.finish_reason
+                interpretation,
+                spread_code=spread_code,
+                pre_clamp_text=repair_pre_clamp,
+                finish_reason=repair_response.finish_reason,
             )
+        logger.info(
+            "reading_generated",
+            reading_id=reading_id,
+            spread_code=spread_code,
+            finish_reason=response.finish_reason,
+            raw_len=len(raw_text),
+            interp_len=len(interpretation),
+            issues=issues,
+        )
         if issues:
             await self._readings.save_interpretation(
                 reading_id=reading_id,

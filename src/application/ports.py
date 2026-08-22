@@ -119,6 +119,10 @@ class MessengerPort(Protocol):
 
     async def delete_message(self, *, chat_id: int, message_id: int) -> None: ...
 
+    async def edit_message(
+        self, *, chat_id: int, message_id: int, text: str
+    ) -> None: ...
+
     async def send_chat_action(
         self, *, chat_id: int, action: str = "typing"
     ) -> None: ...

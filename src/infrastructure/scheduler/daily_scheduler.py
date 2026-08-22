@@ -6,11 +6,17 @@ import asyncio
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import httpx
 import structlog
 
 from src.application.wiring import build_reading_service
 from src.core.settings.config import Settings
-from src.core.settings.constants import DAILY_BATCH_SIZE, DELIVERY_FAILED, DELIVERY_SENT
+from src.core.settings.constants import (
+    DAILY_BATCH_SIZE,
+    DELIVERY_FAILED,
+    DELIVERY_SENT,
+    SPREAD_DAILY,
+)
 from src.infrastructure.db.models import User
 from src.infrastructure.db.repositories.daily_repo import DailyReadingRepository
 from src.infrastructure.db.repositories.user_repo import UserRepository
@@ -110,6 +116,7 @@ class DailyScheduler:
                     await readings._send_existing(
                         reading_id=item["reading_id"],
                         telegram_chat_id=user.telegram_id,
+                        spread_code=SPREAD_DAILY,
                         slots=slots,
                         interpretation=reading["interpretation"],
                     )
@@ -134,5 +141,18 @@ class DailyScheduler:
                         status=status,
                         attempt_count=item["attempt_count"] + 1,
                         next_attempt_at=next_attempt,
+                        last_error=str(exc),
+                    )
+                except httpx.RequestError as exc:
+                    logger.warning(
+                        "daily_delivery_request_error",
+                        daily_id=item["daily_id"],
+                        error=str(exc),
+                    )
+                    await daily_repo.mark_delivery(
+                        daily_id=item["daily_id"],
+                        status="pending",
+                        attempt_count=item["attempt_count"] + 1,
+                        next_attempt_at=datetime.utcnow() + timedelta(minutes=5),
                         last_error=str(exc),
                     )
