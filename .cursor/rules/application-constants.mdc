@@ -1,0 +1,23 @@
+---
+description: Centralize reusable constants and defaults
+alwaysApply: true
+---
+
+# Application Constants
+
+Centralize reusable literals and defaults instead of scattering magic values.
+
+## Preferred locations
+
+- Runtime/config defaults: `src/core/settings/config.py` or `src/core/settings/constants.py`
+- DB-related constants: `src/infrastructure/db/`
+- Integration timeouts/retries: adapter modules under `src/infrastructure/`
+
+## Rules
+
+- Do not duplicate policy literals across business modules.
+- Keep secrets out of constants files; read them from environment variables.
+
+## Project Adaptation Notes
+
+- Adapted for `P:\tarot` layered architecture.

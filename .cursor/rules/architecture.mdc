@@ -1,0 +1,24 @@
+---
+description: Clean layered architecture for tarot bot
+alwaysApply: true
+---
+
+# Architecture
+
+## Layers (dependencies point inward)
+
+1. **domain** — pure business logic (draw engine, card text, entities)
+2. **application** — use cases + port protocols (no infrastructure imports)
+3. **infrastructure** — DB, LLM, Telegram, imaging, scheduler (implements ports)
+4. **presentation** — poller, handlers, keyboards (calls application only)
+
+## Rules
+
+- Application must NOT import from presentation or infrastructure.
+- Composition root is `src/main.py` — wires ports to implementations.
+- No cyclic dependencies between layers.
+- Files ≤200 lines when avoidable; split by responsibility.
+
+## Project Adaptation Notes
+
+- Tarot Telegram bot at `P:\tarot`.

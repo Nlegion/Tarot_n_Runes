@@ -1,0 +1,23 @@
+---
+description: Keep files focused and avoid oversized modules
+alwaysApply: true
+---
+
+# File Size And Decomposition
+
+Keep new and heavily modified files focused and maintainable.
+
+## Rule
+
+- Do not create or grow files beyond roughly 200 lines when avoidable.
+- If logic expands, split by responsibility into helper modules/services.
+- Prefer composition over large monolithic files.
+
+## Allowed exceptions
+
+- Generated files
+- Migration snapshots
+
+## Project Adaptation Notes
+
+- Adapted for `P:\tarot`.

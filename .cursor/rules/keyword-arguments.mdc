@@ -1,0 +1,18 @@
+---
+description: Prefer keyword arguments in multi-parameter calls
+globs: "**/*.py"
+alwaysApply: true
+---
+
+# Keyword Arguments
+
+Prefer keyword arguments for readability and safer refactoring.
+
+## Rule
+
+- For calls with 3+ parameters, use named arguments unless positional form is clearer and conventional.
+- For optional parameters, prefer named arguments.
+
+## Project Adaptation Notes
+
+- Adapted for `P:\tarot`.

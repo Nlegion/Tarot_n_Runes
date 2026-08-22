@@ -1,0 +1,31 @@
+---
+description: Testing standards for pytest runs
+globs: "**/test_*.py"
+alwaysApply: true
+---
+
+# Testing Policy
+
+Tests live in `tests/` and mirror the `src/` layout.
+
+## Core requirements
+
+- Every test must assert behavior or verify an observable outcome.
+- Do not use bare `except:` in tests.
+- Avoid state leakage between tests; restore global or environment state.
+- Prefer deterministic fixtures and explicit setup/teardown for external dependencies.
+
+## Async tests
+
+- For pytest async tests, use `pytest.mark.asyncio`.
+- Mock LLM and Telegram in unit tests.
+
+## Recommended execution strategy
+
+- Full run: `pytest tests -q`
+- Single file: `pytest tests/test_<module>.py -q`
+- Targeted run: `pytest tests -k "<pattern>" -q`
+
+## Project Adaptation Notes
+
+- Adapted for `P:\tarot`; no script-style integration tests.
