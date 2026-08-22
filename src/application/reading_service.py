@@ -130,7 +130,7 @@ class ReadingService:
             spread_code=SPREAD_DAILY,
             slots=draw.slots,
             prompt=prompt,
-            with_focus_pause=not for_broadcast,
+            with_focus_pause=False,
         )
 
     async def _load_slots(self, reading_id: int) -> tuple[SlotDraw, ...]:
