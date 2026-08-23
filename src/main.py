@@ -133,6 +133,8 @@ def main() -> None:
     setup_logging()
     Settings.validate_startup()
     apply_migrations()
+    # Re-apply in case migrations env reconfigured logging (CLI / older images).
+    setup_logging()
     asyncio.run(async_main())
 
 
