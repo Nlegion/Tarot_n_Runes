@@ -25,7 +25,7 @@ async def main() -> None:
     async with session_scope() as session:
         await seed_database(session)
     await health_check()
-    client = TelegramClient()
+    client = TelegramClient(token=Settings.TELEGRAM_BOT_TOKEN_TAROT or "")
     me = await client.request("getMe")
     username = me["result"].get("username")
     print(f"startup_ok bot=@{username}")

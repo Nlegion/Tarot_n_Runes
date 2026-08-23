@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import sys
 
+import structlog
+
 from src.core.settings.config import Settings
 from src.core.settings.log import setup_logging
+from src.core.settings.profiles import tarot_profile
 from src.infrastructure.db.migrations_runner import apply_migrations
 from src.infrastructure.db.seed import seed_database
 from src.infrastructure.db.session import close_engine, health_check, session_scope
@@ -18,16 +21,23 @@ from src.infrastructure.telegram.messenger import TelegramMessenger
 from src.infrastructure.telegram.poller import TelegramPoller
 from src.presentation.handlers import UpdateHandler
 
+logger = structlog.get_logger()
+
 
 async def async_main() -> None:
     async with session_scope() as session:
         await seed_database(session)
     await health_check()
 
+    profile = tarot_profile()
+    logger.info(
+        "bot_startup",
+        runes_token_configured=bool(Settings.TELEGRAM_BOT_TOKEN_RUNES),
+    )
     llm = DeepSeekBackend()
-    tg_client = TelegramClient()
+    tg_client = TelegramClient(token=profile.token)
     messenger = TelegramMessenger(tg_client)
-    images = ImageComposer()
+    images = ImageComposer(images_dir=profile.images_dir)
     handler = UpdateHandler(llm=llm, messenger=messenger, images=images)
     poller = TelegramPoller(client=tg_client, handler=handler)
     scheduler = DailyScheduler(llm=llm, messenger=messenger, images=images)

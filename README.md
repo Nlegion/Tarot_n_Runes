@@ -39,7 +39,9 @@ tarot/
 ├── tests/
 ├── scripts/quality/            # run_gates.py
 ├── scripts/docker/             # entrypoint для контейнера
-├── images/                     # JPG карт 0–77
+├── images/
+│   ├── tarot/                  # JPG карт 0–77
+│   └── runes/                  # заготовка под руны
 ├── tarot_cards.csv
 ├── Dockerfile
 ├── docker-compose.yml
@@ -126,7 +128,7 @@ flowchart TB
 2. **UserService** регистрирует/обновляет пользователя; **ReadingService** вытягивает карты (`draw_engine`).
 3. Для «карты дня» — атомарный `claim_daily` (уникальность `user_id + card_date`).
 4. Собирается промпт → запрос в **DeepSeek** → постобработка текста.
-5. **ImageComposer** склеивает JPG → **Messenger** отправляет фото и HTML-текст.
+5. **ImageComposer** склеивает JPG в памяти → **Messenger** отправляет фото и HTML-текст.
 
 Параллельно **DailyScheduler** в полночь создаёт карты дня для пользователей с `daily_card_broadcast` и доставляет отложенные рассылки.
 
@@ -274,7 +276,8 @@ pip install -r requirements-dev.txt
 
 | Переменная | Обязательно | Описание |
 |------------|-------------|----------|
-| `TELEGRAM_BOT_TOKEN` | да | Токен бота от [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_BOT_TOKEN_TAROT` | да | Токен таро-бота от [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_BOT_TOKEN_RUNES` | нет | Токен бота рун (зарезервирован; poller пока не стартует) |
 | `DEEPSEEK_API_KEY` | да | API-ключ DeepSeek |
 | `TELEGRAM_PROXY_URL` | нет | HTTP(S)-прокси для Telegram API |
 | `GENERATION_SERVER_URL` | нет | Базовый URL LLM (по умолчанию `https://api.deepseek.com`) |
@@ -355,6 +358,7 @@ python scripts/smoke_startup.py
 ## Полезные замечания
 
 - Не коммитьте `.env`, `*.db` и содержимое `tmp/` — они в `.gitignore`.
-- Карты в `images/` — исходные ассеты; временные композиты пишутся в `tmp/`.
+- Карты таро лежат в `images/tarot/`; `images/runes/` зарезервирован под руны.
+- Композиты расклада собираются в памяти (BytesIO) и отправляются без записи на диск.
 - При недоступности Telegram API poller повторяет запросы, а не падает сразу.
 - Подробности для агентов/IDE — в [AGENTS.md](AGENTS.md).

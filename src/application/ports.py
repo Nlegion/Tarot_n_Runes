@@ -107,11 +107,7 @@ class LLMPort(Protocol):
 
 
 class ImagePort(Protocol):
-    def card_image_path(self, card_id: int) -> str: ...
-
-    def compose_reading_image(
-        self, *, slots: tuple[SlotDraw, ...], output_path: str
-    ) -> str: ...
+    def compose_reading_image(self, *, slots: tuple[SlotDraw, ...]) -> bytes: ...
 
 
 class MessengerPort(Protocol):
@@ -128,7 +124,7 @@ class MessengerPort(Protocol):
     ) -> None: ...
 
     async def send_photo(
-        self, *, chat_id: int, photo_path: str, caption: str | None = None
+        self, *, chat_id: int, photo_bytes: bytes, caption: str | None = None
     ) -> None: ...
 
     async def answer_callback(

@@ -27,6 +27,7 @@ from src.application.reading_progress import processing_notice
 from src.core.settings.constants import (
     DELIVERY_NONE,
     DELIVERY_PENDING,
+    INTERPRETATION_FAILED_MESSAGE,
     READING_STATUS_COMPLETED,
     READING_STATUS_FAILED,
     SPREAD_DAILY,
@@ -248,7 +249,7 @@ class ReadingService:
             )
             await self._messenger.send_message(
                 chat_id=telegram_chat_id,
-                text="Не удалось получить толкование. Попробуйте позже.",
+                text=INTERPRETATION_FAILED_MESSAGE,
             )
             return
         await self._readings.save_interpretation(
@@ -289,14 +290,13 @@ class ReadingService:
         message = format_reading_message(
             header=header, interpretation=interpretation or ""
         )
-        output = self._images.compose_reading_image(
-            slots=slots,
-            output_path=f"reading_{reading_id}.jpg",
-        )
+        photo_bytes = self._images.compose_reading_image(slots=slots)
         await self._messenger.send_chat_action(
             chat_id=telegram_chat_id, action="upload_photo"
         )
-        await self._messenger.send_photo(chat_id=telegram_chat_id, photo_path=output)
+        await self._messenger.send_photo(
+            chat_id=telegram_chat_id, photo_bytes=photo_bytes
+        )
         await self._messenger.send_long_text(
             chat_id=telegram_chat_id, text=message, parse_mode="HTML"
         )

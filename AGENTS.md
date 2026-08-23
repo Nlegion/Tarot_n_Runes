@@ -30,7 +30,8 @@ tarot/
 │   └── presentation/           # poller, handlers, keyboards
 ├── tests/                      # mirrors src/
 ├── scripts/quality/
-├── images/                     # card JPGs 0-77
+├── images/tarot/               # tarot card JPGs 0-77
+├── images/runes/               # reserved for runes assets
 ├── tarot_cards.csv
 ├── alembic.ini
 └── .env

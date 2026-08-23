@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from io import BytesIO
 
 from src.application.interpretation import split_messages
 from src.infrastructure.telegram.client import TelegramClient
@@ -57,19 +57,17 @@ class TelegramMessenger:
             await self.send_message(chat_id=chat_id, text=chunk, parse_mode=parse_mode)
 
     async def send_photo(
-        self, *, chat_id: int, photo_path: str, caption: str | None = None
+        self, *, chat_id: int, photo_bytes: bytes, caption: str | None = None
     ) -> None:
-        path = Path(photo_path)
-        with path.open("rb") as handle:
-            files = {"photo": (path.name, handle, "image/jpeg")}
-            data = {"chat_id": str(chat_id)}
-            if caption:
-                data["caption"] = caption[:1024]
-            await self._client.request(
-                "sendPhoto",
-                data=data,
-                files=files,
-            )
+        files = {"photo": ("reading.jpg", BytesIO(photo_bytes), "image/jpeg")}
+        data = {"chat_id": str(chat_id)}
+        if caption:
+            data["caption"] = caption[:1024]
+        await self._client.request(
+            "sendPhoto",
+            data=data,
+            files=files,
+        )
 
     async def answer_callback(self, *, callback_query_id: str, text: str = "") -> None:
         await self._client.request(

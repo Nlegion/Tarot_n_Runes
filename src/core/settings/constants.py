@@ -47,6 +47,10 @@ PROCESSING_MESSAGES: dict[str, str] = {
 }
 
 FOCUS_PROMPT_MESSAGE = "Задайте свой вопрос или подумайте о нём…"
+INTERPRETATION_FAILED_MESSAGE = (
+    "В процессе толкования ментальная связь ослабла. "
+    "Надо думать о вопросе. Попробуйте позже еще раз."
+)
 FOCUS_PAUSE_SECONDS = 2.5
 INTERPRETING_MIN_VISIBLE_SECONDS = 0.5
 

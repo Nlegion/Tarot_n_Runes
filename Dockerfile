@@ -23,7 +23,7 @@ COPY src ./src
 COPY scripts/docker/entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh \
     && chmod +x /entrypoint.sh \
-    && mkdir -p /data /app/tmp
+    && mkdir -p /data
 
 VOLUME ["/data"]
 

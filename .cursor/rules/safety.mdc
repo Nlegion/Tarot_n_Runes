@@ -31,4 +31,5 @@ Do not run any of the following without explicit user or architect confirmation:
 ## Project Adaptation Notes
 
 - Adapted for `P:\tarot` Telegram tarot bot.
-- Card images in `images/` are source assets; do not commit temp composites from `tmp/`.
+- Card images in `images/tarot/` (and future `images/runes/`) are source assets.
+- Reading composites are built in memory; do not write them under `tmp/` or commit temp files.

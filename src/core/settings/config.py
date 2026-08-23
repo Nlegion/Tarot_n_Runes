@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-IMAGES_DIR = PROJECT_ROOT / "images"
+TAROT_IMAGES_DIR = PROJECT_ROOT / "images" / "tarot"
 CSV_PATH = PROJECT_ROOT / "tarot_cards.csv"
-TMP_DIR = PROJECT_ROOT / "tmp"
 
 
 class Settings:
-    TELEGRAM_BOT_TOKEN: str | None = os.getenv("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_BOT_TOKEN_TAROT: str | None = os.getenv("TELEGRAM_BOT_TOKEN_TAROT")
+    TELEGRAM_BOT_TOKEN_RUNES: str | None = os.getenv("TELEGRAM_BOT_TOKEN_RUNES") or None
     DEEPSEEK_API_KEY: str | None = os.getenv("DEEPSEEK_API_KEY")
     TELEGRAM_PROXY_URL: str | None = os.getenv("TELEGRAM_PROXY_URL") or None
     GENERATION_SERVER_URL: str = os.getenv(
@@ -36,8 +36,8 @@ class Settings:
     @classmethod
     def validate_startup(cls) -> None:
         missing: list[str] = []
-        if not cls.TELEGRAM_BOT_TOKEN:
-            missing.append("TELEGRAM_BOT_TOKEN")
+        if not cls.TELEGRAM_BOT_TOKEN_TAROT:
+            missing.append("TELEGRAM_BOT_TOKEN_TAROT")
         if not cls.DEEPSEEK_API_KEY:
             missing.append("DEEPSEEK_API_KEY")
         if missing:

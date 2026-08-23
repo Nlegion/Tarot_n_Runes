@@ -32,11 +32,10 @@ class TelegramApiError(Exception):
 
 
 class TelegramClient:
-    def __init__(self, *, token: str | None = None) -> None:
-        resolved = token if token is not None else Settings.TELEGRAM_BOT_TOKEN
-        if not resolved:
-            raise ValueError("TELEGRAM_BOT_TOKEN is required")
-        self.token = resolved
+    def __init__(self, *, token: str) -> None:
+        if not token:
+            raise ValueError("TELEGRAM_BOT_TOKEN_TAROT is required")
+        self.token = token
         self.base_url = f"https://api.telegram.org/bot{self.token}"
         timeout = httpx.Timeout(
             connect=TELEGRAM_HTTP_CONNECT_TIMEOUT,

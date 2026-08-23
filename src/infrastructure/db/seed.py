@@ -10,7 +10,7 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.settings.config import CSV_PATH, IMAGES_DIR
+from src.core.settings.config import CSV_PATH, TAROT_IMAGES_DIR
 from src.core.settings.constants import CARD_ID_MAX, CARD_ID_MIN, DECK_SIZE
 from src.domain.card_text import preprocess_card_row
 from src.infrastructure.db.models import Card, Prompt, SpreadSlot, SpreadType
@@ -79,7 +79,7 @@ def _row_checksum(row: dict[str, str]) -> str:
 
 
 def _validate_jpeg(card_id: int) -> None:
-    path = IMAGES_DIR / f"{card_id}.jpg"
+    path = TAROT_IMAGES_DIR / f"{card_id}.jpg"
     if not path.exists():
         raise ValueError(f"Missing image: {path}")
     with Image.open(path) as img:
