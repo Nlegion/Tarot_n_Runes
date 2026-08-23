@@ -35,6 +35,10 @@ class UserRepositoryPort(Protocol):
         allow_inverted: bool | None = None,
     ) -> UserSettings: ...
 
+    async def disable_broadcast(self, user_id: int) -> None: ...
+
+    async def get_telegram_id(self, user_id: int) -> int | None: ...
+
 
 class ReadingRepositoryPort(Protocol):
     async def create_reading_with_slots(
@@ -107,11 +111,7 @@ class LLMPort(Protocol):
 
 
 class ImagePort(Protocol):
-    def card_image_path(self, card_id: int) -> str: ...
-
-    def compose_reading_image(
-        self, *, slots: tuple[SlotDraw, ...], output_path: str
-    ) -> str: ...
+    def compose_reading_image(self, *, slots: tuple[SlotDraw, ...]) -> bytes: ...
 
 
 class MessengerPort(Protocol):
@@ -128,7 +128,7 @@ class MessengerPort(Protocol):
     ) -> None: ...
 
     async def send_photo(
-        self, *, chat_id: int, photo_path: str, caption: str | None = None
+        self, *, chat_id: int, photo_bytes: bytes, caption: str | None = None
     ) -> None: ...
 
     async def answer_callback(

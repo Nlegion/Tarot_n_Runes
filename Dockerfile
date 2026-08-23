@@ -18,12 +18,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY alembic.ini .
 COPY tarot_cards.csv .
+COPY runes.csv .
+COPY fonts ./fonts
 COPY images ./images
 COPY src ./src
 COPY scripts/docker/entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh \
     && chmod +x /entrypoint.sh \
-    && mkdir -p /data /app/tmp
+    && mkdir -p /data
 
 VOLUME ["/data"]
 

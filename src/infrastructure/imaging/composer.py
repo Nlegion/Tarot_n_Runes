@@ -2,31 +2,26 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
 
-from src.core.settings.config import IMAGES_DIR, TMP_DIR
+from src.core.settings.config import TAROT_IMAGES_DIR
 from src.domain.entities import SlotDraw
 
 
 class ImageComposer:
-    def __init__(
-        self, *, images_dir: Path | None = None, tmp_dir: Path | None = None
-    ) -> None:
-        self._images_dir = images_dir or IMAGES_DIR
-        self._tmp_dir = tmp_dir or TMP_DIR
-        self._tmp_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, *, images_dir: Path | None = None) -> None:
+        self._images_dir = images_dir or TAROT_IMAGES_DIR
 
-    def card_image_path(self, card_id: int) -> str:
-        return str(self._images_dir / f"{card_id}.jpg")
+    def _card_image_path(self, card_id: int) -> Path:
+        return self._images_dir / f"{card_id}.jpg"
 
-    def compose_reading_image(
-        self, *, slots: tuple[SlotDraw, ...], output_path: str
-    ) -> str:
+    def compose_reading_image(self, *, slots: tuple[SlotDraw, ...]) -> bytes:
         images: list[Image.Image] = []
         for slot in slots:
-            path = self.card_image_path(slot.card_id)
+            path = self._card_image_path(slot.card_id)
             img = Image.open(path).convert("RGB")
             if slot.is_inverted:
                 img = img.rotate(180)
@@ -45,9 +40,10 @@ class ImageComposer:
             for img in resized:
                 result.paste(img, (offset, 0))
                 offset += img.width
-        out = self._tmp_dir / output_path
-        result.save(out, format="JPEG", quality=90)
+        buffer = BytesIO()
+        result.save(buffer, format="JPEG", quality=90)
         for img in images:
             img.close()
-        result.close()
-        return str(out)
+        if result is not images[0]:
+            result.close()
+        return buffer.getvalue()

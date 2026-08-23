@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -12,10 +13,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.settings.config import Settings
 from src.infrastructure.db import models as db_models  # noqa: F401
+from src.infrastructure.db import rune_models as rune_db_models  # noqa: F401
 from src.infrastructure.db.base import Base
 
 config = context.config
-if config.config_file_name is not None:
+# Application owns logging via setup_logging(). Skip alembic.ini fileConfig when
+# root handlers already exist — otherwise root level becomes WARN and structlog
+# INFO events disappear from docker logs.
+if config.config_file_name is not None and not logging.getLogger().handlers:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata

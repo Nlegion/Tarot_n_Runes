@@ -30,8 +30,10 @@ tarot/
 │   └── presentation/           # poller, handlers, keyboards
 ├── tests/                      # mirrors src/
 ├── scripts/quality/
-├── images/                     # card JPGs 0-77
+├── images/tarot/               # tarot card JPGs 0-77
+├── fonts/                      # Noto Sans Runic for rune ovals
 ├── tarot_cards.csv
+├── runes.csv
 ├── alembic.ini
 └── .env
 ```
@@ -58,3 +60,5 @@ python scripts/quality/run_gates.py
 - Files ≤200 lines when avoidable.
 - Structured logging; no bare `except:` or silent `pass`.
 - Secrets only in `.env`; never commit `.env` or `*.db`.
+- Shared `users` table for tarot and runes bots; per-bot settings and rune tables are separate.
+- Rune images are generated in memory from Unicode + font; do not write composites to disk.

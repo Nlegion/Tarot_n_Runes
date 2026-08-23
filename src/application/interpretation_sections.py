@@ -56,7 +56,9 @@ def section_body(paragraph: str) -> tuple[str | None, str]:
     return None, normalized
 
 
-def is_label_only(paragraph: str, *, max_body_chars: int = LABEL_ONLY_BODY_CHARS) -> bool:
+def is_label_only(
+    paragraph: str, *, max_body_chars: int = LABEL_ONLY_BODY_CHARS
+) -> bool:
     section, body = section_body(paragraph)
     if section is None:
         return False
@@ -113,11 +115,7 @@ def thin_sections(
         name, body = section_body(paragraph)
         if name in required:
             bodies[name] = max(bodies.get(name, 0), len(body))
-    return [
-        name
-        for name in required
-        if bodies.get(name, 0) < min_body_chars
-    ]
+    return [name for name in required if bodies.get(name, 0) < min_body_chars]
 
 
 def clamp_with_sections(

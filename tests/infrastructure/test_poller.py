@@ -5,7 +5,21 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
-from src.infrastructure.telegram.poller import TelegramPoller
+from src.infrastructure.telegram.poller import TelegramPoller, format_network_error
+
+
+def test_format_network_error_not_empty_for_timeout() -> None:
+    exc = httpx.ConnectTimeout("")
+    text = format_network_error(exc)
+    assert text
+    assert "ConnectTimeout" in text
+
+
+def test_format_network_error_includes_message() -> None:
+    exc = httpx.ConnectError("connection refused")
+    text = format_network_error(exc)
+    assert "ConnectError" in text
+    assert "connection refused" in text
 
 
 @pytest.mark.asyncio
