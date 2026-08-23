@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 
 import structlog
@@ -28,11 +29,12 @@ from src.core.settings.constants import (
     DELIVERY_NONE,
     DELIVERY_PENDING,
     INTERPRETATION_FAILED_MESSAGE,
+    PROCESSING_MESSAGES,
     READING_STATUS_COMPLETED,
     READING_STATUS_FAILED,
     SPREAD_DAILY,
 )
-from src.domain.draw_engine import draw_spread
+from src.domain.draw_engine import TAROT_DRAW_CONFIG, DrawConfig, draw_spread
 from src.domain.entities import SlotDraw
 
 logger = structlog.get_logger()
@@ -50,6 +52,9 @@ class ReadingService:
         llm: LLMPort,
         images: ImagePort,
         messenger: MessengerPort,
+        draw_config: DrawConfig | None = None,
+        processing_messages: dict[str, str] | None = None,
+        item_label: str = "Карта",
     ) -> None:
         self._users = users
         self._cards = cards
@@ -59,6 +64,9 @@ class ReadingService:
         self._llm = llm
         self._images = images
         self._messenger = messenger
+        self._draw_config = draw_config or TAROT_DRAW_CONFIG
+        self._processing_messages = processing_messages or PROCESSING_MESSAGES
+        self._item_label = item_label
 
     async def perform_spread(
         self,
@@ -69,7 +77,9 @@ class ReadingService:
     ) -> None:
         settings = await self._users.get_settings(user_id)
         draw = draw_spread(
-            spread_code=spread_code, allow_inverted=settings.allow_inverted
+            spread_code=spread_code,
+            allow_inverted=settings.allow_inverted,
+            config=self._draw_config,
         )
         spread_type_id = await self._spreads.get_spread_type_id(spread_code)
         prompt = await self._spreads.get_active_prompt(spread_type_id)
@@ -103,7 +113,9 @@ class ReadingService:
         prompt = await self._spreads.get_active_prompt(spread_type_id)
         slot_id_map = await self._spreads.get_slot_id_map(spread_type_id)
         draw = draw_spread(
-            spread_code=SPREAD_DAILY, allow_inverted=settings.allow_inverted
+            spread_code=SPREAD_DAILY,
+            allow_inverted=settings.allow_inverted,
+            config=self._draw_config,
         )
         delivery = DELIVERY_PENDING if for_broadcast else DELIVERY_NONE
         reading_id, created = await self._daily.claim_daily(
@@ -118,13 +130,21 @@ class ReadingService:
         if not created:
             existing = await self._readings.get_reading(reading_id)
             if existing and existing.get("interpretation"):
-                await self._send_existing(
+                await self.deliver_existing_daily(
                     reading_id=reading_id,
                     telegram_chat_id=telegram_chat_id,
-                    spread_code=SPREAD_DAILY,
-                    slots=await self._load_slots(reading_id),
                 )
                 return
+            for _ in range(3):
+                await asyncio.sleep(1.0)
+                existing = await self._readings.get_reading(reading_id)
+                if existing and existing.get("interpretation"):
+                    await self.deliver_existing_daily(
+                        reading_id=reading_id,
+                        telegram_chat_id=telegram_chat_id,
+                    )
+                    return
+            return
         await self._interpret_and_send(
             reading_id=reading_id,
             telegram_chat_id=telegram_chat_id,
@@ -132,6 +152,24 @@ class ReadingService:
             slots=draw.slots,
             prompt=prompt,
             with_focus_pause=False,
+        )
+
+    async def deliver_existing_daily(
+        self,
+        *,
+        reading_id: int,
+        telegram_chat_id: int,
+    ) -> None:
+        reading = await self._readings.get_reading(reading_id)
+        if reading is None or not reading.get("interpretation"):
+            return
+        slots = await self._load_slots(reading_id)
+        await self._send_existing(
+            reading_id=reading_id,
+            telegram_chat_id=telegram_chat_id,
+            spread_code=SPREAD_DAILY,
+            slots=slots,
+            interpretation=reading["interpretation"],
         )
 
     async def _load_slots(self, reading_id: int) -> tuple[SlotDraw, ...]:
@@ -174,12 +212,14 @@ class ReadingService:
             spread_code=spread_code,
             slots=slots,
             cards=cards,
+            item_label=self._item_label,
         )
         async with processing_notice(
             messenger=self._messenger,
             chat_id=telegram_chat_id,
             spread_code=spread_code,
             with_focus_pause=with_focus_pause,
+            processing_messages=self._processing_messages,
         ) as run_generation:
             response = await run_generation(lambda: self._llm.generate(request=request))
         raw_text = response.text
@@ -209,6 +249,7 @@ class ReadingService:
                 chat_id=telegram_chat_id,
                 spread_code=spread_code,
                 with_focus_pause=False,
+                processing_messages=self._processing_messages,
             ) as run_repair:
                 repair_response = await run_repair(
                     lambda: self._llm.generate(request=repair_request)

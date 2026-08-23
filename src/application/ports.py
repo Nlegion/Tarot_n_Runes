@@ -35,6 +35,10 @@ class UserRepositoryPort(Protocol):
         allow_inverted: bool | None = None,
     ) -> UserSettings: ...
 
+    async def disable_broadcast(self, user_id: int) -> None: ...
+
+    async def get_telegram_id(self, user_id: int) -> int | None: ...
+
 
 class ReadingRepositoryPort(Protocol):
     async def create_reading_with_slots(

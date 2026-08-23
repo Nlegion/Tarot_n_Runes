@@ -13,6 +13,29 @@ from src.infrastructure.telegram.client import TelegramClient
 logger = structlog.get_logger()
 
 
+def format_network_error(exc: BaseException) -> str:
+    """Build a non-empty error string for httpx/network failures."""
+    parts: list[str] = [type(exc).__name__]
+    message = str(exc).strip()
+    if message:
+        parts.append(message)
+    else:
+        rendered = repr(exc).strip()
+        if rendered and rendered != type(exc).__name__:
+            parts.append(rendered)
+    request = None
+    try:
+        request = getattr(exc, "request", None)
+    except RuntimeError:
+        request = None
+    if request is not None:
+        method = getattr(request, "method", None)
+        url = getattr(request, "url", None)
+        if method or url:
+            parts.append(f"{method or '?'} {url or '?'}")
+    return ": ".join(parts)
+
+
 class TelegramPoller:
     def __init__(
         self,
@@ -35,7 +58,10 @@ class TelegramPoller:
                 json={"drop_pending_updates": False},
             )
         except httpx.RequestError as exc:
-            logger.warning("telegram_delete_webhook_error", error=str(exc))
+            logger.warning(
+                "telegram_delete_webhook_error",
+                error=format_network_error(exc),
+            )
         while self._running:
             params: dict = {
                 "timeout": self._poll_timeout,
@@ -50,7 +76,10 @@ class TelegramPoller:
                     retry=False,
                 )
             except httpx.RequestError as exc:
-                logger.warning("telegram_poll_request_error", error=str(exc))
+                logger.warning(
+                    "telegram_poll_request_error",
+                    error=format_network_error(exc),
+                )
                 await asyncio.sleep(5)
                 continue
             for update in payload.get("result", []):
@@ -59,7 +88,9 @@ class TelegramPoller:
                     await self._handler(update)
                 except Exception as exc:
                     logger.exception(
-                        "update_handler_failed", update_id=update_id, error=str(exc)
+                        "update_handler_failed",
+                        update_id=update_id,
+                        error=format_network_error(exc),
                     )
                 self._offset = update_id + 1
 

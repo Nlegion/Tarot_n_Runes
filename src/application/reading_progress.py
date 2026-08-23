@@ -31,7 +31,9 @@ async def processing_notice(
     chat_id: int,
     spread_code: str,
     with_focus_pause: bool = False,
+    processing_messages: dict[str, str] | None = None,
 ):
+    messages = processing_messages or PROCESSING_MESSAGES
     await messenger.send_chat_action(chat_id=chat_id, action="typing")
     status_id: int | None = None
     typing_task = asyncio.create_task(
@@ -50,7 +52,7 @@ async def processing_notice(
             )
             gen_task = asyncio.create_task(coro_factory(), name="llm_generate")
             await asyncio.sleep(FOCUS_PAUSE_SECONDS)
-            interpreting_text = PROCESSING_MESSAGES.get(spread_code, "🔮 Толкую карты…")
+            interpreting_text = messages.get(spread_code, "🔮 Толкую…")
             await messenger.edit_message(
                 chat_id=chat_id,
                 message_id=status_id,
@@ -65,7 +67,7 @@ async def processing_notice(
 
         status_id = await messenger.send_message(
             chat_id=chat_id,
-            text=PROCESSING_MESSAGES.get(spread_code, "🔮 Толкую карты…"),
+            text=messages.get(spread_code, "🔮 Толкую…"),
         )
         return await coro_factory()
 

@@ -36,7 +36,9 @@ def build_prompt(
     spread_code: str,
     slots: tuple[SlotDraw, ...],
     cards: dict[int, Card],
+    item_label: str = "Карта",
 ) -> GenerationRequest:
+    slot_labels = {**_SLOT_LABELS, "T1": item_label}
     if spread_code in ("single", "daily"):
         slot = slots[0]
         card = cards[slot.card_id]
@@ -50,7 +52,7 @@ def build_prompt(
         blocks: list[str] = []
         for slot in slots:
             card = cards[slot.card_id]
-            label = _SLOT_LABELS.get(slot.slot_code, slot.slot_code)
+            label = slot_labels.get(slot.slot_code, slot.slot_code)
             blocks.append(
                 f"{label}: {card.name} ({card.orig_name}), "
                 f"{_orientation_label(slot.is_inverted)}.\n"

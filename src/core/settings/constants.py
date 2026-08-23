@@ -6,6 +6,10 @@ DECK_SIZE = 78
 CARD_ID_MIN = 0
 CARD_ID_MAX = 77
 
+RUNE_DECK_SIZE = 25
+RUNE_ID_MIN = 1
+RUNE_ID_MAX = 25
+
 MAX_SLOT_TEXT_CHARS = 2500
 MAX_TELEGRAM_MESSAGE = 4096
 MAX_TELEGRAM_CAPTION = 1024
@@ -46,6 +50,19 @@ PROCESSING_MESSAGES: dict[str, str] = {
     SPREAD_DAILY: "🔮 Карта дня…",
 }
 
+RUNE_PROCESSING_MESSAGES: dict[str, str] = {
+    SPREAD_SINGLE: "🔮 Толкую руну…",
+    SPREAD_THREE: "🔮 Толкую расклад…",
+    SPREAD_DAILY: "🔮 Руна дня…",
+}
+
+WELCOME_MESSAGE = (
+    "Добро пожаловать!\n"
+    "Успокойтесь и отбросьте сильные эмоции.\n"
+    "Четко сформулируйте свой вопрос вслух или про себя.\n"
+    "Выберите расклад:"
+)
+
 FOCUS_PROMPT_MESSAGE = "Задайте свой вопрос или подумайте о нём…"
 INTERPRETATION_FAILED_MESSAGE = (
     "В процессе толкования ментальная связь ослабла. "
@@ -62,3 +79,6 @@ DELIVERY_NONE = "none"
 DELIVERY_PENDING = "pending"
 DELIVERY_SENT = "sent"
 DELIVERY_FAILED = "failed"
+
+PROFILE_TAROT = "tarot"
+PROFILE_RUNES = "runes"

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.settings.config import Settings
 from src.infrastructure.db import models as db_models  # noqa: F401
+from src.infrastructure.db import rune_models as rune_db_models  # noqa: F401
 from src.infrastructure.db.base import Base
 
 config = context.config

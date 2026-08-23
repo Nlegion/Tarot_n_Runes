@@ -1,4 +1,4 @@
-"""User repository."""
+"""Rune-bot user settings (shared users table)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities import UserSettings as UserSettingsEntity
-from src.infrastructure.db.models import User, UserSettings, utc_now
+from src.infrastructure.db.models import User, utc_now
+from src.infrastructure.db.rune_models import RuneUserSettings
 
 
-class UserRepository:
+class RuneUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -36,30 +37,21 @@ class UserRepository:
             )
             self._session.add(user)
             await self._session.flush()
-            settings = UserSettings(user_id=user.id)
-            self._session.add(settings)
+        else:
+            user.username = username
+            user.first_name = first_name
+            user.last_name = last_name
+            user.language_code = language_code
+            user.last_seen_at = utc_now()
             await self._session.flush()
-            return user.id
-        user.username = username
-        user.first_name = first_name
-        user.last_name = last_name
-        user.language_code = language_code
-        user.last_seen_at = utc_now()
         await self._ensure_settings(user.id)
-        await self._session.flush()
         return user.id
-
-    async def get_by_telegram_id(self, telegram_id: int) -> User | None:
-        result = await self._session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
-        return result.scalar_one_or_none()
 
     async def get_settings(self, user_id: int) -> UserSettingsEntity:
         row = await self._ensure_settings(user_id)
         return UserSettingsEntity(
-            daily_card_broadcast=row.daily_card_broadcast,
-            allow_inverted=row.allow_inverted,
+            daily_card_broadcast=row.daily_rune_broadcast,
+            allow_inverted=True,
         )
 
     async def update_settings(
@@ -69,34 +61,33 @@ class UserRepository:
         daily_card_broadcast: bool | None = None,
         allow_inverted: bool | None = None,
     ) -> UserSettingsEntity:
+        del allow_inverted
         row = await self._ensure_settings(user_id)
         if daily_card_broadcast is not None:
-            row.daily_card_broadcast = daily_card_broadcast
-        if allow_inverted is not None:
-            row.allow_inverted = allow_inverted
+            row.daily_rune_broadcast = daily_card_broadcast
         await self._session.flush()
         return UserSettingsEntity(
-            daily_card_broadcast=row.daily_card_broadcast,
-            allow_inverted=row.allow_inverted,
+            daily_card_broadcast=row.daily_rune_broadcast,
+            allow_inverted=True,
         )
 
     async def disable_broadcast(self, user_id: int) -> None:
         row = await self._ensure_settings(user_id)
-        row.daily_card_broadcast = False
+        row.daily_rune_broadcast = False
         await self._session.flush()
 
     async def get_telegram_id(self, user_id: int) -> int | None:
         user = await self._session.get(User, user_id)
         return user.telegram_id if user is not None else None
 
-    async def _ensure_settings(self, user_id: int) -> UserSettings:
+    async def _ensure_settings(self, user_id: int) -> RuneUserSettings:
         result = await self._session.execute(
-            select(UserSettings).where(UserSettings.user_id == user_id)
+            select(RuneUserSettings).where(RuneUserSettings.user_id == user_id)
         )
         row = result.scalar_one_or_none()
         if row is not None:
             return row
-        row = UserSettings(user_id=user_id)
+        row = RuneUserSettings(user_id=user_id)
         self._session.add(row)
         await self._session.flush()
         return row

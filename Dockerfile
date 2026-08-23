@@ -18,6 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY alembic.ini .
 COPY tarot_cards.csv .
+COPY runes.csv .
+COPY fonts ./fonts
 COPY images ./images
 COPY src ./src
 COPY scripts/docker/entrypoint.sh /entrypoint.sh
