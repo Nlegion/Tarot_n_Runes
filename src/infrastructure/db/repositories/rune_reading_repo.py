@@ -63,6 +63,14 @@ class RuneReadingRepository:
         reading.interpretation = interpretation
         await self._session.flush()
 
+    async def reset_for_reinterpretation(self, *, reading_id: int) -> None:
+        reading = await self._session.get(RuneReading, reading_id)
+        if reading is None:
+            raise ValueError(f"RuneReading {reading_id} not found")
+        reading.status = READING_STATUS_PENDING
+        reading.interpretation = None
+        await self._session.flush()
+
     async def get_reading(self, reading_id: int) -> dict | None:
         result = await self._session.execute(
             select(RuneReading)

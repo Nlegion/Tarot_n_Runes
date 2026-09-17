@@ -63,6 +63,8 @@ class ReadingRepositoryPort(Protocol):
 
     async def get_reading(self, reading_id: int) -> dict | None: ...
 
+    async def reset_for_reinterpretation(self, *, reading_id: int) -> None: ...
+
 
 class DailyReadingRepositoryPort(Protocol):
     async def claim_daily(
@@ -80,6 +82,31 @@ class DailyReadingRepositoryPort(Protocol):
     async def get_daily_reading_id(
         self, *, user_id: int, card_date: date
     ) -> int | None: ...
+
+    async def get_daily_state(
+        self, *, user_id: int, card_date: date
+    ) -> dict | None: ...
+
+    async def mark_interpretation_attempt(
+        self,
+        *,
+        user_id: int,
+        card_date: date,
+        attempt_count: int,
+        next_attempt_at: datetime | None,
+        last_error: str | None,
+    ) -> None: ...
+
+    async def replace_daily_reading(
+        self,
+        *,
+        user_id: int,
+        card_date: date,
+        spread_type_id: int,
+        prompt_id: int,
+        slots: tuple[SlotDraw, ...],
+        slot_id_map: dict[str, int],
+    ) -> int: ...
 
     async def list_pending_deliveries(self, *, limit: int) -> list[dict]: ...
 

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import date
-
 import structlog
 
+from src.application.daily_reading import DailyReadingMixin
 from src.application.interpretation import (
     finalize_interpretation,
     prepare_interpretation_text,
@@ -26,13 +24,10 @@ from src.application.prompt_builder import build_prompt, build_repair_prompt
 from src.application.reading_format import format_reading_header, format_reading_message
 from src.application.reading_progress import processing_notice
 from src.core.settings.constants import (
-    DELIVERY_NONE,
-    DELIVERY_PENDING,
     INTERPRETATION_FAILED_MESSAGE,
     PROCESSING_MESSAGES,
     READING_STATUS_COMPLETED,
     READING_STATUS_FAILED,
-    SPREAD_DAILY,
 )
 from src.domain.draw_engine import TAROT_DRAW_CONFIG, DrawConfig, draw_spread
 from src.domain.entities import SlotDraw
@@ -40,7 +35,7 @@ from src.domain.entities import SlotDraw
 logger = structlog.get_logger()
 
 
-class ReadingService:
+class ReadingService(DailyReadingMixin):
     def __init__(
         self,
         *,
@@ -100,78 +95,6 @@ class ReadingService:
             with_focus_pause=True,
         )
 
-    async def perform_daily(
-        self,
-        *,
-        user_id: int,
-        telegram_chat_id: int,
-        card_date: date,
-        for_broadcast: bool = False,
-    ) -> None:
-        settings = await self._users.get_settings(user_id)
-        spread_type_id = await self._spreads.get_spread_type_id(SPREAD_DAILY)
-        prompt = await self._spreads.get_active_prompt(spread_type_id)
-        slot_id_map = await self._spreads.get_slot_id_map(spread_type_id)
-        draw = draw_spread(
-            spread_code=SPREAD_DAILY,
-            allow_inverted=settings.allow_inverted,
-            config=self._draw_config,
-        )
-        delivery = DELIVERY_PENDING if for_broadcast else DELIVERY_NONE
-        reading_id, created = await self._daily.claim_daily(
-            user_id=user_id,
-            card_date=card_date,
-            spread_type_id=spread_type_id,
-            prompt_id=prompt["id"],
-            slots=draw.slots,
-            slot_id_map=slot_id_map,
-            delivery_status=delivery,
-        )
-        if not created:
-            existing = await self._readings.get_reading(reading_id)
-            if existing and existing.get("interpretation"):
-                await self.deliver_existing_daily(
-                    reading_id=reading_id,
-                    telegram_chat_id=telegram_chat_id,
-                )
-                return
-            for _ in range(3):
-                await asyncio.sleep(1.0)
-                existing = await self._readings.get_reading(reading_id)
-                if existing and existing.get("interpretation"):
-                    await self.deliver_existing_daily(
-                        reading_id=reading_id,
-                        telegram_chat_id=telegram_chat_id,
-                    )
-                    return
-            return
-        await self._interpret_and_send(
-            reading_id=reading_id,
-            telegram_chat_id=telegram_chat_id,
-            spread_code=SPREAD_DAILY,
-            slots=draw.slots,
-            prompt=prompt,
-            with_focus_pause=False,
-        )
-
-    async def deliver_existing_daily(
-        self,
-        *,
-        reading_id: int,
-        telegram_chat_id: int,
-    ) -> None:
-        reading = await self._readings.get_reading(reading_id)
-        if reading is None or not reading.get("interpretation"):
-            return
-        slots = await self._load_slots(reading_id)
-        await self._send_existing(
-            reading_id=reading_id,
-            telegram_chat_id=telegram_chat_id,
-            spread_code=SPREAD_DAILY,
-            slots=slots,
-            interpretation=reading["interpretation"],
-        )
-
     async def _load_slots(self, reading_id: int) -> tuple[SlotDraw, ...]:
         reading = await self._readings.get_reading(reading_id)
         if reading is None:
@@ -201,7 +124,8 @@ class ReadingService:
         slots: tuple[SlotDraw, ...],
         prompt: dict,
         with_focus_pause: bool = False,
-    ) -> None:
+        notify_on_failure: bool = True,
+    ) -> bool:
         cards = {
             slot.card_id: await self._cards.get_by_id(slot.card_id) for slot in slots
         }
@@ -288,11 +212,12 @@ class ReadingService:
                 raw_llm_text_repair=repair_raw,
                 interpretation="",
             )
-            await self._messenger.send_message(
-                chat_id=telegram_chat_id,
-                text=INTERPRETATION_FAILED_MESSAGE,
-            )
-            return
+            if notify_on_failure:
+                await self._messenger.send_message(
+                    chat_id=telegram_chat_id,
+                    text=INTERPRETATION_FAILED_MESSAGE,
+                )
+            return False
         await self._readings.save_interpretation(
             reading_id=reading_id,
             status=READING_STATUS_COMPLETED,
@@ -307,6 +232,7 @@ class ReadingService:
             slots=slots,
             interpretation=interpretation,
         )
+        return True
 
     async def _send_existing(
         self,

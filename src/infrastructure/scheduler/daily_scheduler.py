@@ -112,10 +112,19 @@ class DailyScheduler:
                     non_invertible_ids=self._non_invertible_ids,
                 )
                 try:
-                    await readings.deliver_existing_daily(
+                    delivered = await readings.deliver_existing_daily(
                         reading_id=item["reading_id"],
                         telegram_chat_id=item["telegram_id"],
                     )
+                    if not delivered:
+                        delivered = await readings.perform_daily(
+                            user_id=item["user_id"],
+                            telegram_chat_id=item["telegram_id"],
+                            card_date=item["card_date"],
+                            for_broadcast=True,
+                        )
+                    if not delivered:
+                        continue
                     await daily.mark_delivery(
                         daily_id=item["daily_id"],
                         status=DELIVERY_SENT,
